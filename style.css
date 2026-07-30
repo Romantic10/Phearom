@@ -36,6 +36,9 @@ body{
     height:1400px;
     
 }
+.menu span{
+    margin-right: 15px;
+}
 .menu span:hover{
     margin-right: 15px;
     text-shadow: 2px 2px 3px;
