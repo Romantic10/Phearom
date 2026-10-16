@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function() {
+        try {
+          // 1. Safe fetch property setup if needed
+          try {
+            var _rawFetch = window.fetch ? window.fetch.bind(window) : null;
+            var _currentFetch = _rawFetch;
+            Object.defineProperty(window, 'fetch', {
+              get: function() {
+                return _currentFetch;
+              },
+              set: function(fn) {
+                _currentFetch = fn;
+              },
+              configurable: true,
+              enumerable: true
+            });
+          } catch (_) {}
+
+          // 2. Filter console.error for WebSocket / Vite HMR noise
+          var _origConsoleError = console.error;
+          console.error = function() {
+            var args = Array.prototype.slice.call(arguments);
+            var str = '';
+            for (var i = 0; i < args.length; i++) {
+              var a = args[i];
+              str += ' ' + (a && (a.message || a.stack || (a.toString ? a.toString() : String(a))));
+            }
+            if (
+              str.indexOf('WebSocket') !== -1 ||
+              str.indexOf('websocket') !== -1 ||
+              str.indexOf('[vite] failed to connect to websocket') !== -1 ||
+              str.indexOf('WebSocket closed without opened') !== -1
+            ) {
+              return;
+            }
+            return _origConsoleError.apply(console, arguments);
+          };
+
+          // 3. Prevent unhandledrejection for WebSocket closures
+          window.addEventListener('unhandledrejection', function(event) {
+            var reason = event && event.reason;
+            var msg = (reason && (reason.message || reason.stack || String(reason))) || '';
+            if (
+              msg.indexOf('WebSocket') !== -1 ||
+              msg.indexOf('websocket') !== -1 ||
+              msg.indexOf('WebSocket closed without opened') !== -1
+            ) {
+              event.preventDefault();
+              if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+              if (event.stopPropagation) event.stopPropagation();
+            }
+          }, true);
+
+          // 4. Prevent window error events for WebSocket
+          window.addEventListener('error', function(event) {
+            var msg = (event && (event.message || '')) || '';
+            if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('websocket') !== -1) {
+              event.preventDefault();
+              if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+              if (event.stopPropagation) event.stopPropagation();
+            }
+          }, true);
+
+          // 5. Provide silent safe WebSocket shim for Vite HMR in cloud preview iframe
+          var NativeWebSocket = window.WebSocket;
+          if (typeof Proxy !== 'undefined' && NativeWebSocket) {
+            window.WebSocket = new Proxy(NativeWebSocket, {
+              construct: function(target, args) {
+                var url = args[0];
+                var protocols = args[1];
+                var isViteHmr = false;
+                if (
+                  protocols === 'vite-hmr' ||
+                  (Array.isArray(protocols) && protocols.indexOf('vite-hmr') !== -1) ||
+                  (typeof url === 'string' && (url.indexOf('token=') !== -1 || url.indexOf('vite') !== -1))
+                ) {
+                  isViteHmr = true;
+                }
+
+                if (isViteHmr) {
+                  var dummy = new EventTarget();
+                  dummy.readyState = 1; // WebSocket.OPEN
+                  dummy.url = url;
+                  dummy.protocol = 'vite-hmr';
+                  dummy.bufferedAmount = 0;
+                  dummy.extensions = '';
+                  dummy.binaryType = 'blob';
+                  dummy.send = function() {};
+                  dummy.close = function() {
+                    dummy.readyState = 3; // WebSocket.CLOSED
+                  };
+                  setTimeout(function() {
+                    try {
+                      dummy.dispatchEvent(new Event('open'));
+                    } catch (_) {}
+                  }, 0);
+                  return dummy;
+                }
+
+                return Reflect.construct(target, args);
+              }
+            });
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <title>ClearFrame - Lossless Video Remuxer & Inspector</title>
+    <meta name="description" content="Lossless video remuxing and stream inspection tool. Prepare pristine MP4 & MOV files for social media without generational quality loss." />
+    <meta property="og:title" content="ClearFrame - Lossless Video Remuxer & Inspector" />
+    <meta property="og:description" content="Lossless video remuxing and stream inspection tool. Prepare pristine MP4 & MOV files for social media without generational quality loss." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

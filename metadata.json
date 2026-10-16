@@ -1,0 +1,8 @@
+{
+  "name": "ClearFrame - Lossless Video Remuxer & Inspector",
+  "description": "Lossless video remuxing and stream inspection tool. Prepare pristine MP4 & MOV files for social media without generational quality loss.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
